@@ -1,9 +1,10 @@
 -- 02_seed.sql
 -- Minimal sample data for local development/testing
 
+-- Password for both seeded users is: Admin123!
 INSERT INTO users (first_name, last_name, email, password_hash, role, active) VALUES
-('Ana', 'Petrovic', 'ana.petrovic@example.com', '$2b$12$examplehash1placeholder', 'admin', TRUE),
-('Marko', 'Jovanovic', 'marko.jovanovic@example.com', '$2b$12$examplehash2placeholder', 'member', TRUE);
+('Ana', 'Petrovic', 'ana.petrovic@example.com', '$2a$10$hVIb2xWWA1poIlzqgKDod.S0Au0HSQqb.OPgAfPbQcUjtwVR/txia', 'admin', TRUE),
+('Marko', 'Jovanovic', 'marko.jovanovic@example.com', '$2a$10$hVIb2xWWA1poIlzqgKDod.S0Au0HSQqb.OPgAfPbQcUjtwVR/txia', 'member', TRUE);
 
 INSERT INTO projects (name, description, active) VALUES
 ('Website Redesign', 'Revamp the marketing site with a new design system.', TRUE),

@@ -37,7 +37,7 @@ CREATE TABLE tasks (
     project_id INT NOT NULL,
     title VARCHAR(200) NOT NULL,
     description TEXT,
-    status ENUM('todo', 'in_progress', 'done', 'blocked') NOT NULL DEFAULT 'todo',
+    status ENUM('todo', 'in_progress', 'in_review', 'done', 'canceled') NOT NULL DEFAULT 'todo',
     priority ENUM('low', 'medium', 'high', 'urgent') NOT NULL DEFAULT 'medium',
     assigned_user_id INT,
     created_by_user_id INT NOT NULL,

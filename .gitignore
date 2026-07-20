@@ -4,10 +4,27 @@ __pycache__/
 venv/
 .venv/
 
+# Node / Vue frontend
+front/node_modules/
+front/dist/
+
+# Java backend
+back/target/
+
 # Environment variables
 .env
+front/.env
+back/.env
 
 # OS/editor junk
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Ignore the project_team_task_manager.html file
+project_team_task_manager.html
+
+# Ignore Claude's heavy internal cache and chat log folders
+.claude/
+!.claude/settings.json
+!.claude/rules/
