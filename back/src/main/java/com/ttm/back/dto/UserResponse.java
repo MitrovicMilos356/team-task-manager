@@ -3,6 +3,8 @@ package com.ttm.back.dto;
 import com.ttm.back.model.Role;
 import com.ttm.back.model.User;
 
+import java.time.LocalDateTime;
+
 public class UserResponse {
 
     private Long id;
@@ -11,6 +13,8 @@ public class UserResponse {
     private String email;
     private Role role;
     private boolean active;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     public static UserResponse fromEntity(User user) {
         UserResponse response = new UserResponse();
@@ -20,6 +24,8 @@ public class UserResponse {
         response.email = user.getEmail();
         response.role = user.getRole();
         response.active = user.isActive();
+        response.createdAt = user.getCreatedAt();
+        response.updatedAt = user.getUpdatedAt();
         return response;
     }
 
@@ -45,5 +51,13 @@ public class UserResponse {
 
     public boolean isActive() {
         return active;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
     }
 }

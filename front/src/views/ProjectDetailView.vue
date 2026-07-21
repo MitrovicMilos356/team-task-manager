@@ -1,28 +1,24 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import AppHeader from '../../components/AppHeader.vue'
-import * as projectsService from '../../services/projectsService'
-import * as projectMembersService from '../../services/projectMembersService'
-import * as usersAdminService from '../../services/usersAdminService'
-import * as tasksService from '../../services/tasksService'
+import AppHeader from '../components/AppHeader.vue'
+import { useAuthStore } from '../store/auth'
+import * as projectsService from '../services/projectsService'
+import * as projectMembersService from '../services/projectMembersService'
+import * as tasksService from '../services/tasksService'
 
 const PRIORITIES = ['low', 'medium', 'high', 'urgent']
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const projectId = Number(route.params.id)
 
 const project = ref(null)
 const members = ref([])
-const allUsers = ref([])
 const tasks = ref([])
 const loading = ref(true)
 const loadError = ref('')
-
-const selectedUserId = ref('')
-const addError = ref('')
-const adding = ref(false)
 
 const taskModalOpen = ref(false)
 const taskSubmitting = ref(false)
@@ -30,57 +26,27 @@ const taskServerError = ref('')
 const taskForm = reactive({ title: '', description: '', priority: 'medium', assignedUserId: '', dueDate: '' })
 const taskErrors = reactive({ title: '' })
 
-const availableUsers = computed(() => {
-  const memberIds = new Set(members.value.map((m) => m.id))
-  return allUsers.value.filter((u) => !memberIds.has(u.id) && u.active)
+const canCreateTasks = computed(() => {
+  if (auth.isAdmin) return true
+  return members.value.some((m) => m.id === auth.user?.id)
 })
 
 async function load() {
   loading.value = true
   loadError.value = ''
   try {
-    const [projectRes, membersRes, usersRes, tasksRes] = await Promise.all([
+    const [projectRes, membersRes, tasksRes] = await Promise.all([
       projectsService.getProject(projectId),
       projectMembersService.getMembers(projectId),
-      usersAdminService.getUsers(),
       tasksService.getTasksByProject(projectId)
     ])
     project.value = projectRes.data
     members.value = membersRes.data.map((m) => ({ ...m.user, joinedAt: m.joinedAt }))
-    allUsers.value = usersRes.data
     tasks.value = tasksRes.data
   } catch (err) {
     loadError.value = err.response?.data?.message || 'Failed to load project.'
   } finally {
     loading.value = false
-  }
-}
-
-async function onAddMember() {
-  addError.value = ''
-  if (!selectedUserId.value) {
-    addError.value = 'Select a user to add.'
-    return
-  }
-
-  adding.value = true
-  try {
-    await projectMembersService.addMember(projectId, Number(selectedUserId.value))
-    selectedUserId.value = ''
-    await load()
-  } catch (err) {
-    addError.value = err.response?.data?.message || 'Could not add member.'
-  } finally {
-    adding.value = false
-  }
-}
-
-async function onRemoveMember(user) {
-  try {
-    await projectMembersService.removeMember(projectId, user.id)
-    await load()
-  } catch (err) {
-    loadError.value = err.response?.data?.message || 'Could not remove member.'
   }
 }
 
@@ -127,19 +93,8 @@ async function onCreateTask() {
   }
 }
 
-async function onReassign(task, event) {
-  const value = event.target.value
-  const assignedUserId = value ? Number(value) : null
-  try {
-    await tasksService.updateAssignee(task.id, assignedUserId)
-    await load()
-  } catch (err) {
-    loadError.value = err.response?.data?.message || 'Could not reassign task.'
-  }
-}
-
 function backToProjects() {
-  router.push({ name: 'admin-projects' })
+  router.push({ name: 'projects' })
 }
 
 onMounted(load)
@@ -169,16 +124,14 @@ onMounted(load)
           <div class="panel-header">
             <h1>Members</h1>
           </div>
-
           <div v-if="!members.length" class="empty-state">No members yet.</div>
-          <table v-else class="table" style="margin-bottom: 20px">
+          <table v-else class="table">
             <thead>
               <tr>
                 <th>Name</th>
                 <th>Email</th>
                 <th>Role</th>
                 <th>Member since</th>
-                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -187,48 +140,26 @@ onMounted(load)
                 <td>{{ member.email }}</td>
                 <td>{{ member.role }}</td>
                 <td>{{ member.joinedAt ? member.joinedAt.slice(0, 10) : '—' }}</td>
-                <td>
-                  <button class="btn-link" type="button" @click="onRemoveMember(member)">Remove</button>
-                </td>
               </tr>
             </tbody>
           </table>
-
-          <div v-if="addError" class="alert-error">{{ addError }}</div>
-
-          <div class="two-col" style="align-items: end">
-            <div class="field" style="margin-bottom: 0">
-              <label for="member-picker">Add a member</label>
-              <select id="member-picker" v-model="selectedUserId">
-                <option value="" disabled>Select a user…</option>
-                <option v-for="user in availableUsers" :key="user.id" :value="user.id">
-                  {{ user.firstName }} {{ user.lastName }} ({{ user.email }})
-                </option>
-              </select>
-            </div>
-            <button class="btn-primary" type="button" style="width:auto" :disabled="adding" @click="onAddMember">
-              {{ adding ? 'Adding…' : 'Add to project' }}
-            </button>
-          </div>
         </div>
 
         <div class="panel">
           <div class="panel-header">
             <h1>Tasks</h1>
             <button
+              v-if="canCreateTasks"
               class="btn-primary"
               type="button"
               style="width:auto"
-              :disabled="!members.length"
-              :title="!members.length ? 'Add a member before creating tasks' : ''"
               @click="openTaskModal"
             >
               Add task
             </button>
           </div>
 
-          <div v-if="!members.length" class="empty-state">Add a project member before creating tasks.</div>
-          <div v-else-if="!tasks.length" class="empty-state">No tasks yet. Add the first one.</div>
+          <div v-if="!tasks.length" class="empty-state">No tasks yet.</div>
           <table v-else class="table">
             <thead>
               <tr>
@@ -241,15 +172,12 @@ onMounted(load)
             </thead>
             <tbody>
               <tr v-for="task in tasks" :key="task.id">
-                <td>{{ task.title }}</td>
                 <td>
-                  <select :value="task.assignedUser?.id ?? ''" @change="onReassign(task, $event)">
-                    <option value="">Unassigned</option>
-                    <option v-for="member in members" :key="member.id" :value="member.id">
-                      {{ member.firstName }} {{ member.lastName }}
-                    </option>
-                  </select>
+                  <router-link class="btn-link" :to="{ name: 'task-detail', params: { id: task.id } }">
+                    {{ task.title }}
+                  </router-link>
                 </td>
+                <td>{{ task.assignedUser ? `${task.assignedUser.firstName} ${task.assignedUser.lastName}` : 'Unassigned' }}</td>
                 <td>{{ task.status }}</td>
                 <td>{{ task.priority }}</td>
                 <td>{{ task.dueDate || '—' }}</td>

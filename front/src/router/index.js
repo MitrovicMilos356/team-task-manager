@@ -6,12 +6,20 @@ import DashboardView from '../views/DashboardView.vue'
 import AdminUsersView from '../views/admin/AdminUsersView.vue'
 import AdminProjectsView from '../views/admin/AdminProjectsView.vue'
 import AdminProjectDetailView from '../views/admin/AdminProjectDetailView.vue'
+import ProjectsView from '../views/ProjectsView.vue'
+import ProjectDetailView from '../views/ProjectDetailView.vue'
+import TasksView from '../views/TasksView.vue'
+import TaskDetailView from '../views/TaskDetailView.vue'
 
 const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', name: 'login', component: LoginView, meta: { guestOnly: true } },
   { path: '/signup', name: 'signup', component: SignupView, meta: { guestOnly: true } },
   { path: '/dashboard', name: 'dashboard', component: DashboardView, meta: { requiresAuth: true } },
+  { path: '/projects', name: 'projects', component: ProjectsView, meta: { requiresAuth: true } },
+  { path: '/projects/:id', name: 'project-detail', component: ProjectDetailView, meta: { requiresAuth: true } },
+  { path: '/tasks', name: 'tasks', component: TasksView, meta: { requiresAuth: true } },
+  { path: '/tasks/:id', name: 'task-detail', component: TaskDetailView, meta: { requiresAuth: true } },
   {
     path: '/admin',
     redirect: '/admin/users',

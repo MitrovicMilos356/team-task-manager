@@ -23,7 +23,6 @@ public class ProjectController {
 
     @GetMapping
     public List<ProjectResponse> list() {
-        CurrentUser.requireAdmin();
         return projectService.listProjects();
     }
 
@@ -35,7 +34,6 @@ public class ProjectController {
 
     @GetMapping("/{id}")
     public ProjectResponse get(@PathVariable Long id) {
-        CurrentUser.requireAdmin();
         return projectService.getProject(id);
     }
 

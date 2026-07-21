@@ -1,7 +1,7 @@
 package com.ttm.back.controller;
 
 import com.ttm.back.dto.AddMemberRequest;
-import com.ttm.back.dto.UserResponse;
+import com.ttm.back.dto.ProjectMemberResponse;
 import com.ttm.back.security.CurrentUser;
 import com.ttm.back.service.ProjectService;
 import jakarta.validation.Valid;
@@ -22,13 +22,12 @@ public class ProjectMemberController {
     }
 
     @GetMapping
-    public List<UserResponse> list(@PathVariable Long projectId) {
-        CurrentUser.requireAdmin();
+    public List<ProjectMemberResponse> list(@PathVariable Long projectId) {
         return projectService.listMembers(projectId);
     }
 
     @PostMapping
-    public ResponseEntity<UserResponse> add(@PathVariable Long projectId, @Valid @RequestBody AddMemberRequest request) {
+    public ResponseEntity<ProjectMemberResponse> add(@PathVariable Long projectId, @Valid @RequestBody AddMemberRequest request) {
         CurrentUser.requireAdmin();
         return ResponseEntity.status(HttpStatus.CREATED).body(projectService.addMember(projectId, request.getUserId()));
     }

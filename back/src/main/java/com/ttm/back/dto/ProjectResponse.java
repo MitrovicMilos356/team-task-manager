@@ -2,6 +2,8 @@ package com.ttm.back.dto;
 
 import com.ttm.back.model.Project;
 
+import java.time.LocalDateTime;
+
 public class ProjectResponse {
 
     private Long id;
@@ -10,6 +12,8 @@ public class ProjectResponse {
     private boolean active;
     private long memberCount;
     private long openTaskCount;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     public static ProjectResponse fromEntity(Project project, long memberCount, long openTaskCount) {
         ProjectResponse response = new ProjectResponse();
@@ -19,6 +23,8 @@ public class ProjectResponse {
         response.active = project.isActive();
         response.memberCount = memberCount;
         response.openTaskCount = openTaskCount;
+        response.createdAt = project.getCreatedAt();
+        response.updatedAt = project.getUpdatedAt();
         return response;
     }
 
@@ -44,5 +50,13 @@ public class ProjectResponse {
 
     public long getOpenTaskCount() {
         return openTaskCount;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
     }
 }
