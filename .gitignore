@@ -28,3 +28,4 @@ project_team_task_manager.html
 .claude/
 !.claude/settings.json
 !.claude/rules/
+CLAUDE.md

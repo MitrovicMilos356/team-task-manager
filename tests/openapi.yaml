@@ -1,0 +1,736 @@
+openapi: 3.0.3
+info:
+  title: Team Task Manager API
+  description: >
+    REST API for the Project Team Task Manager application (Section 7 of
+    project_team_task_manager.html). Covers auth, user administration,
+    projects, project members, tasks, comments, task history and dashboard
+    statistics.
+  version: "1.0.0"
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Projects
+  - name: Project Members
+  - name: Tasks
+  - name: Comments
+  - name: Task History
+  - name: Dashboard
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/users/me:
+    get:
+      tags: [Users]
+      summary: Get the currently authenticated user
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/users:
+    get:
+      tags: [Users]
+      summary: List all users (admin only)
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/UserResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Users]
+      summary: Create a new user (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateUserRequest' }
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/users/{id}:
+    put:
+      tags: [Users]
+      summary: Update a user (admin only)
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateUserRequest' }
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/users/{id}/status:
+    patch:
+      tags: [Users]
+      summary: Activate/deactivate a user (admin only)
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateStatusRequest' }
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/projects:
+    get:
+      tags: [Projects]
+      summary: List projects visible to the current user
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProjectResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Projects]
+      summary: Create a project (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProjectRequest' }
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/projects/{id}:
+    get:
+      tags: [Projects]
+      summary: Get project details
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Projects]
+      summary: Update a project (admin only)
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProjectRequest' }
+      responses:
+        '200':
+          description: Updated project
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Projects]
+      summary: Deactivate a project (admin only)
+      description: Soft-deletes the project (sets active=false) and returns the updated resource.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Deactivated project
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/projects/{id}/members:
+    get:
+      tags: [Project Members]
+      summary: List members of a project
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: List of members
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProjectMemberResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Project Members]
+      summary: Add a member to a project (admin only)
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddMemberRequest' }
+      responses:
+        '201':
+          description: Member added
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectMemberResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/projects/{id}/members/{userId}:
+    delete:
+      tags: [Project Members]
+      summary: Remove a member from a project (admin only)
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '204':
+          description: Member removed
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/tasks:
+    get:
+      tags: [Tasks]
+      summary: List/search/filter tasks
+      parameters:
+        - name: projectId
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/TaskStatus' }
+        - name: priority
+          in: query
+          schema: { $ref: '#/components/schemas/TaskPriority' }
+        - name: assignedUserId
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: dueBefore
+          in: query
+          schema: { type: string, format: date }
+        - name: dueAfter
+          in: query
+          schema: { type: string, format: date }
+        - name: q
+          in: query
+          description: Free-text search across title and description
+          schema: { type: string }
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TaskResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Tasks]
+      summary: Create a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTaskRequest' }
+      responses:
+        '201':
+          description: Task created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/tasks/{id}:
+    get:
+      tags: [Tasks]
+      summary: Get task details
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Tasks]
+      summary: Update task title/description/priority/due date
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTaskRequest' }
+      responses:
+        '200':
+          description: Updated task
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Tasks]
+      summary: Delete a task
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '204':
+          description: Task deleted
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/tasks/{id}/status:
+    patch:
+      tags: [Tasks]
+      summary: Update task status
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTaskStatusRequest' }
+      responses:
+        '200':
+          description: Updated task
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/tasks/{id}/assignee:
+    patch:
+      tags: [Tasks]
+      summary: Reassign (or unassign) a task
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateAssigneeRequest' }
+      responses:
+        '200':
+          description: Updated task
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/tasks/{id}/comments:
+    get:
+      tags: [Comments]
+      summary: List comments for a task
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CommentResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Comments]
+      summary: Add a comment to a task
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCommentRequest' }
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommentResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/tasks/{id}/history:
+    get:
+      tags: [Task History]
+      summary: List change history for a task
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: List of history entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TaskHistoryResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/dashboard/statistics:
+    get:
+      tags: [Dashboard]
+      summary: Get aggregate dashboard statistics
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DashboardStatsResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    ProjectId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    TaskId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+
+  responses:
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing, invalid or expired authentication token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Authenticated user lacks the required role
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Resource conflict (e.g. duplicate email, duplicate membership)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp: { type: string, format: date-time }
+        status: { type: integer }
+        error: { type: string }
+        message: { type: string }
+
+    Role:
+      type: string
+      enum: [admin, manager, member]
+
+    TaskStatus:
+      type: string
+      enum: [todo, in_progress, in_review, done, canceled]
+
+    TaskPriority:
+      type: string
+      enum: [low, medium, high, urgent]
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+
+    RegisterRequest:
+      type: object
+      required: [firstName, lastName, email, password]
+      properties:
+        firstName: { type: string }
+        lastName: { type: string }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+
+    AuthResponse:
+      type: object
+      properties:
+        token: { type: string }
+        user: { $ref: '#/components/schemas/UserResponse' }
+
+    UserResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        firstName: { type: string }
+        lastName: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/Role' }
+        active: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CreateUserRequest:
+      type: object
+      required: [firstName, lastName, email, password, role]
+      properties:
+        firstName: { type: string }
+        lastName: { type: string }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        role: { $ref: '#/components/schemas/Role' }
+
+    UpdateUserRequest:
+      type: object
+      required: [firstName, lastName, email, role]
+      properties:
+        firstName: { type: string }
+        lastName: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/Role' }
+
+    UpdateStatusRequest:
+      type: object
+      required: [active]
+      properties:
+        active: { type: boolean }
+
+    ProjectRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 150 }
+        description: { type: string, nullable: true }
+
+    ProjectResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        active: { type: boolean }
+        memberCount: { type: integer, format: int64 }
+        openTaskCount: { type: integer, format: int64 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    ProjectMemberResponse:
+      type: object
+      properties:
+        user: { $ref: '#/components/schemas/UserResponse' }
+        joinedAt: { type: string, format: date-time }
+
+    AddMemberRequest:
+      type: object
+      required: [userId]
+      properties:
+        userId: { type: integer, format: int64 }
+
+    CreateTaskRequest:
+      type: object
+      required: [projectId, title, priority]
+      properties:
+        projectId: { type: integer, format: int64 }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        priority: { $ref: '#/components/schemas/TaskPriority' }
+        assignedUserId: { type: integer, format: int64, nullable: true }
+        dueDate: { type: string, format: date, nullable: true }
+
+    UpdateTaskRequest:
+      type: object
+      required: [title, priority]
+      properties:
+        title: { type: string }
+        description: { type: string, nullable: true }
+        priority: { $ref: '#/components/schemas/TaskPriority' }
+        dueDate: { type: string, format: date, nullable: true }
+
+    UpdateTaskStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: '#/components/schemas/TaskStatus' }
+
+    UpdateAssigneeRequest:
+      type: object
+      properties:
+        assignedUserId: { type: integer, format: int64, nullable: true }
+
+    TaskResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        projectId: { type: integer, format: int64 }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        status: { $ref: '#/components/schemas/TaskStatus' }
+        priority: { $ref: '#/components/schemas/TaskPriority' }
+        assignedUser:
+          allOf:
+            - $ref: '#/components/schemas/UserResponse'
+          nullable: true
+        createdByUserId: { type: integer, format: int64 }
+        dueDate: { type: string, format: date, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CreateCommentRequest:
+      type: object
+      required: [comment]
+      properties:
+        comment: { type: string }
+
+    CommentResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        author: { $ref: '#/components/schemas/UserResponse' }
+        comment: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    TaskHistoryResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        fieldName: { type: string }
+        oldValue: { type: string, nullable: true }
+        newValue: { type: string, nullable: true }
+        changedBy: { $ref: '#/components/schemas/UserResponse' }
+        createdAt: { type: string, format: date-time }
+
+    DashboardStatsResponse:
+      type: object
+      properties:
+        totalProjects: { type: integer, format: int64 }
+        totalOpenTasks: { type: integer, format: int64 }
+        tasksByStatus:
+          type: object
+          additionalProperties: { type: integer, format: int64 }
+        overdueTasks: { type: integer, format: int64 }
+        myAssignedOpenTasks: { type: integer, format: int64 }

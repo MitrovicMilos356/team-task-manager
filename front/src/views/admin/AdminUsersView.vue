@@ -3,7 +3,7 @@ import { onMounted, reactive, ref } from 'vue'
 import AppHeader from '../../components/AppHeader.vue'
 import * as usersAdminService from '../../services/usersAdminService'
 
-const ROLES = ['admin', 'manager', 'member']
+const ROLES = ['admin', 'member']
 
 const users = ref([])
 const loading = ref(true)

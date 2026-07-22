@@ -1,0 +1,366 @@
+{
+  "info": {
+    "_postman_id": "ttm-api-collection",
+    "name": "Team Task Manager API",
+    "description": "Postman collection for the Team Task Manager REST API (see tests/openapi.yaml for the full spec).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "projectId", "value": "" },
+    { "key": "taskId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"Anic\",\n  \"email\": \"ana.anic@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": [ "{{baseUrl}}" ], "path": [ "api", "auth", "register" ] }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.environment.set('token', body.token);",
+                  "  if (body.user && body.user.id) { pm.environment.set('userId', body.user.id); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": [ "{{baseUrl}}" ], "path": [ "api", "auth", "login" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/users/me", "host": [ "{{baseUrl}}" ], "path": [ "api", "users", "me" ] }
+          }
+        },
+        {
+          "name": "List Users (admin)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/users", "host": [ "{{baseUrl}}" ], "path": [ "api", "users" ] }
+          }
+        },
+        {
+          "name": "Create User (admin)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Marko\",\n  \"lastName\": \"Markovic\",\n  \"email\": \"marko.markovic@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"member\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users", "host": [ "{{baseUrl}}" ], "path": [ "api", "users" ] }
+          }
+        },
+        {
+          "name": "Update User (admin)",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Marko\",\n  \"lastName\": \"Markovic\",\n  \"email\": \"marko.markovic@example.com\",\n  \"role\": \"manager\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "users", "{{userId}}" ] }
+          }
+        },
+        {
+          "name": "Update User Status (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"active\": false\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/status", "host": [ "{{baseUrl}}" ], "path": [ "api", "users", "{{userId}}", "status" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "item": [
+        {
+          "name": "List Projects",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/projects", "host": [ "{{baseUrl}}" ], "path": [ "api", "projects" ] }
+          }
+        },
+        {
+          "name": "Create Project (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.environment.set('projectId', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Website Redesign\",\n  \"description\": \"Revamp the marketing website\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/projects", "host": [ "{{baseUrl}}" ], "path": [ "api", "projects" ] }
+          }
+        },
+        {
+          "name": "Get Project",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/projects/{{projectId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "projects", "{{projectId}}" ] }
+          }
+        },
+        {
+          "name": "Update Project (admin)",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Website Redesign v2\",\n  \"description\": \"Revamp the marketing website, phase 2\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/projects/{{projectId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "projects", "{{projectId}}" ] }
+          }
+        },
+        {
+          "name": "Deactivate Project (admin)",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/projects/{{projectId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "projects", "{{projectId}}" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Project Members",
+      "item": [
+        {
+          "name": "List Project Members",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/projects/{{projectId}}/members", "host": [ "{{baseUrl}}" ], "path": [ "api", "projects", "{{projectId}}", "members" ] }
+          }
+        },
+        {
+          "name": "Add Project Member (admin)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}}\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/projects/{{projectId}}/members", "host": [ "{{baseUrl}}" ], "path": [ "api", "projects", "{{projectId}}", "members" ] }
+          }
+        },
+        {
+          "name": "Remove Project Member (admin)",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/projects/{{projectId}}/members/{{userId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "projects", "{{projectId}}", "members", "{{userId}}" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "List/Filter Tasks",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks?projectId={{projectId}}&status=todo&priority=high&assignedUserId={{userId}}&dueBefore=2026-12-31&dueAfter=2026-01-01&q=redesign",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "tasks" ],
+              "query": [
+                { "key": "projectId", "value": "{{projectId}}" },
+                { "key": "status", "value": "todo" },
+                { "key": "priority", "value": "high" },
+                { "key": "assignedUserId", "value": "{{userId}}" },
+                { "key": "dueBefore", "value": "2026-12-31" },
+                { "key": "dueAfter", "value": "2026-01-01" },
+                { "key": "q", "value": "redesign" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.environment.set('taskId', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectId\": {{projectId}},\n  \"title\": \"Design landing page\",\n  \"description\": \"Create hi-fi mockups\",\n  \"priority\": \"high\",\n  \"assignedUserId\": {{userId}},\n  \"dueDate\": \"2026-08-15\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/tasks", "host": [ "{{baseUrl}}" ], "path": [ "api", "tasks" ] }
+          }
+        },
+        {
+          "name": "Get Task",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/tasks/{{taskId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "tasks", "{{taskId}}" ] }
+          }
+        },
+        {
+          "name": "Update Task",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Design landing page (v2)\",\n  \"description\": \"Create hi-fi mockups + prototype\",\n  \"priority\": \"urgent\",\n  \"dueDate\": \"2026-08-20\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/tasks/{{taskId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "tasks", "{{taskId}}" ] }
+          }
+        },
+        {
+          "name": "Update Task Status",
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/tasks/{{taskId}}/status", "host": [ "{{baseUrl}}" ], "path": [ "api", "tasks", "{{taskId}}", "status" ] }
+          }
+        },
+        {
+          "name": "Update Task Assignee",
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignedUserId\": {{userId}}\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/tasks/{{taskId}}/assignee", "host": [ "{{baseUrl}}" ], "path": [ "api", "tasks", "{{taskId}}", "assignee" ] }
+          }
+        },
+        {
+          "name": "Delete Task",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/tasks/{{taskId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "tasks", "{{taskId}}" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Comments",
+      "item": [
+        {
+          "name": "List Task Comments",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/tasks/{{taskId}}/comments", "host": [ "{{baseUrl}}" ], "path": [ "api", "tasks", "{{taskId}}", "comments" ] }
+          }
+        },
+        {
+          "name": "Add Task Comment",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"Looks good, starting work on this today.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/tasks/{{taskId}}/comments", "host": [ "{{baseUrl}}" ], "path": [ "api", "tasks", "{{taskId}}", "comments" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Task History",
+      "item": [
+        {
+          "name": "List Task History",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/tasks/{{taskId}}/history", "host": [ "{{baseUrl}}" ], "path": [ "api", "tasks", "{{taskId}}", "history" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Statistics",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/dashboard/statistics", "host": [ "{{baseUrl}}" ], "path": [ "api", "dashboard", "statistics" ] }
+          }
+        }
+      ]
+    }
+  ]
+}
