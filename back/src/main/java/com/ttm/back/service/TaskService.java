@@ -24,6 +24,8 @@ import com.ttm.back.repository.UserRepository;
 import com.ttm.back.security.CurrentUser;
 import com.ttm.back.security.ProjectAccessGuard;
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
@@ -63,8 +65,27 @@ public class TaskService {
         this.accessGuard = accessGuard;
     }
 
-    public List<TaskResponse> listTasks(Long projectId, TaskStatus status, TaskPriority priority,
-                                         Long assignedUserId, LocalDate dueBefore, LocalDate dueAfter, String q) {
+    public Page<TaskResponse> listTasks(Long projectId, TaskStatus status, TaskPriority priority,
+                                         Long assignedUserId, LocalDate dueBefore, LocalDate dueAfter, String q,
+                                         Pageable pageable) {
+        List<Long> allowedProjectIds = null;
+        if (projectId != null) {
+            accessGuard.assertCanView(projectId);
+        } else if (CurrentUser.getRole() != Role.admin) {
+            allowedProjectIds = accessGuard.visibleProjectIds();
+            if (allowedProjectIds.isEmpty()) {
+                return Page.empty(pageable);
+            }
+        }
+
+        Specification<Task> spec = buildSpecification(projectId, allowedProjectIds, status, priority, assignedUserId, dueBefore, dueAfter, q);
+        Page<Task> tasks = taskRepository.findAll(spec, pageable);
+        Map<Long, User> assigneesById = loadUsers(tasks.getContent().stream().map(Task::getAssignedUserId).filter(Objects::nonNull).distinct().toList());
+        return tasks.map(task -> toResponse(task, assigneesById.get(task.getAssignedUserId())));
+    }
+
+    public List<TaskResponse> exportTasks(Long projectId, TaskStatus status, TaskPriority priority,
+                                           Long assignedUserId, LocalDate dueBefore, LocalDate dueAfter, String q) {
         List<Long> allowedProjectIds = null;
         if (projectId != null) {
             accessGuard.assertCanView(projectId);

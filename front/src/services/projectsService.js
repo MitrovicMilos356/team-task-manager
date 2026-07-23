@@ -1,7 +1,8 @@
 import api from './api'
 
-export function getProjects() {
-  return api.get('/projects')
+export async function getProjects() {
+  const { data } = await api.get('/projects', { params: { size: 1000 } })
+  return { data: data.content }
 }
 
 export function getProject(id) {
@@ -18,4 +19,8 @@ export function updateProject(id, payload) {
 
 export function deactivateProject(id) {
   return api.delete(`/projects/${id}`)
+}
+
+export function exportProjectsCsv() {
+  return api.get('/projects/export', { responseType: 'blob' })
 }

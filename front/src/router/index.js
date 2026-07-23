@@ -6,6 +6,7 @@ import DashboardView from '../views/DashboardView.vue'
 import AdminUsersView from '../views/admin/AdminUsersView.vue'
 import AdminProjectsView from '../views/admin/AdminProjectsView.vue'
 import AdminProjectDetailView from '../views/admin/AdminProjectDetailView.vue'
+import AdminAuditLogView from '../views/admin/AdminAuditLogView.vue'
 import ProjectsView from '../views/ProjectsView.vue'
 import ProjectDetailView from '../views/ProjectDetailView.vue'
 import TasksView from '../views/TasksView.vue'
@@ -27,7 +28,8 @@ const routes = [
     children: [
       { path: 'users', name: 'admin-users', component: AdminUsersView, meta: { requiresAuth: true, requiresAdmin: true } },
       { path: 'projects', name: 'admin-projects', component: AdminProjectsView, meta: { requiresAuth: true, requiresAdmin: true } },
-      { path: 'projects/:id', name: 'admin-project-detail', component: AdminProjectDetailView, meta: { requiresAuth: true, requiresAdmin: true } }
+      { path: 'projects/:id', name: 'admin-project-detail', component: AdminProjectDetailView, meta: { requiresAuth: true, requiresAdmin: true } },
+      { path: 'audit-log', name: 'admin-audit-log', component: AdminAuditLogView, meta: { requiresAuth: true, requiresAdmin: true } }
     ]
   }
 ]

@@ -1,4 +1,4 @@
--- 01_schema.sql
+-- V1__baseline_schema.sql
 -- Creates all tables for the project/task tracker app
 
 CREATE TABLE users (
@@ -7,7 +7,7 @@ CREATE TABLE users (
     last_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
-    role ENUM('admin', 'manager', 'member') NOT NULL DEFAULT 'member',
+    role ENUM('admin', 'member') NOT NULL DEFAULT 'member',
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

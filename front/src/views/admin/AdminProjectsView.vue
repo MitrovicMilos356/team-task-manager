@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import AppHeader from '../../components/AppHeader.vue'
 import * as projectsService from '../../services/projectsService'
+import { downloadBlob } from '../../utils/download'
 
 const projects = ref([])
 const loading = ref(true)
@@ -91,6 +92,22 @@ async function onDeactivate(project) {
   }
 }
 
+const exporting = ref(false)
+const exportError = ref('')
+
+async function exportCsv() {
+  exportError.value = ''
+  exporting.value = true
+  try {
+    const { data } = await projectsService.exportProjectsCsv()
+    downloadBlob(data, 'projects.csv')
+  } catch (err) {
+    exportError.value = err.response?.data?.message || 'Could not export projects.'
+  } finally {
+    exporting.value = false
+  }
+}
+
 onMounted(loadProjects)
 </script>
 
@@ -101,10 +118,16 @@ onMounted(loadProjects)
       <div class="panel">
         <div class="panel-header">
           <h1>Projects</h1>
-          <button class="btn-primary" type="button" style="width:auto" @click="openCreateModal">
-            Add project
-          </button>
+          <div class="table-actions">
+            <button class="btn-secondary" type="button" :disabled="exporting" @click="exportCsv">
+              {{ exporting ? 'Exporting…' : 'Export CSV' }}
+            </button>
+            <button class="btn-primary" type="button" style="width:auto" @click="openCreateModal">
+              Add project
+            </button>
+          </div>
         </div>
+        <div v-if="exportError" class="alert-error">{{ exportError }}</div>
 
         <div v-if="loading" class="empty-state">Loading projects…</div>
         <div v-else-if="loadError" class="alert-error">{{ loadError }}</div>

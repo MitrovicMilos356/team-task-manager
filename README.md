@@ -4,7 +4,7 @@ A full-stack team task management app: authentication, an admin panel (users, pr
 
 - **front/** — Vue 3 SPA (Vue Router, Pinia, Axios, Vite)
 - **back/** — Spring Boot REST API (Spring Data JPA, Spring Security/JWT, springdoc-openapi)
-- **db/** — MySQL schema and seed data, run automatically via Docker
+- **db/** — MySQL runs via Docker; schema and seed data are Flyway migrations under `back/src/main/resources/db/migration/`, applied automatically on backend startup
 
 See [project_team_task_manager.html](project_team_task_manager.html) for the full product spec and business logic.
 
@@ -27,7 +27,7 @@ Run these from the repository root, in order, in three terminals.
 docker compose up -d db
 ```
 
-This starts MySQL 8 on `localhost:3306` and automatically runs `db/init/01_schema.sql` and `db/init/02_seed.sql` on first boot, creating the schema and seeding sample data.
+This starts MySQL 8 on `localhost:3306` with an empty database.
 
 **2. Start the backend API**
 
@@ -37,7 +37,7 @@ cp .env.example .env
 mvn spring-boot:run
 ```
 
-API available at `http://localhost:8080`. Swagger UI at `http://localhost:8080/swagger-ui.html`.
+On startup, Flyway automatically applies the schema and seed-data migrations from `back/src/main/resources/db/migration/` against the MySQL instance. API available at `http://localhost:8080`. Swagger UI at `http://localhost:8080/swagger-ui.html`.
 
 **3. Start the frontend**
 
@@ -45,10 +45,10 @@ API available at `http://localhost:8080`. Swagger UI at `http://localhost:8080/s
 cd front
 cp .env.example .env
 npm install
-npm run dev
+npm run dev -- --host
 ```
 
-App available at `http://localhost:5173`.
+App available at `http://192.168.1.11:5173/`.
 
 **4. Log in**
 
@@ -68,7 +68,18 @@ docker compose down -v
 docker compose up -d db
 ```
 
-`down -v` removes the MySQL data volume, so the init scripts run again on the next `up`.
+`down -v` removes the MySQL data volume. On the next backend startup, Flyway detects the empty schema and re-applies all migrations (schema + seed data) from scratch.
+
+## Running tests
+
+The backend test suite covers login (success/failure), task creation and validation, project-access authorization, task status changes with history recording, and dashboard statistics. It runs against an in-memory H2 database (via Flyway migrations) so it needs no external services.
+
+```bash
+cd back
+mvn test
+```
+
+The frontend currently has no automated test suite (see Known limitations below).
 
 ## Configuration
 
@@ -85,7 +96,8 @@ Each app has its own `.env`, copied from an `.env.example`. Defaults match `dock
 | `DB_PASSWORD` | `apppassword` | MySQL password |
 | `DB_NAME` | `myapp_dev` | MySQL database name |
 | `JWT_SECRET` | *(dev placeholder)* | Secret used to sign JWTs — change for anything beyond local dev |
-| `JWT_EXPIRATION_MINUTES` | `120` | JWT token lifetime |
+| `JWT_EXPIRATION_MINUTES` | `120` | Access token lifetime |
+| `REFRESH_TOKEN_EXPIRATION_DAYS` | `7` | Refresh token lifetime |
 
 **`front/.env`**
 
@@ -108,23 +120,31 @@ All endpoints are prefixed with `/api`. Full interactive docs are in Swagger UI 
 |---|---|---|
 | Auth | POST | `/auth/register` |
 | Auth | POST | `/auth/login` |
+| Auth | POST | `/auth/refresh` |
+| Auth | POST | `/auth/logout` |
 | Users | GET | `/users/me` |
-| Users (admin) | GET / POST | `/users` |
+| Users (admin) | GET (paginated) / POST | `/users` |
 | Users (admin) | PUT | `/users/{id}` |
 | Users (admin) | PATCH | `/users/{id}/status` |
-| Projects | GET / POST | `/projects` |
+| Users (admin) | GET | `/users/export` (CSV) |
+| Projects | GET (paginated) / POST | `/projects` |
 | Projects | GET / PUT / DELETE | `/projects/{id}` |
+| Projects (admin) | GET | `/projects/export` (CSV) |
 | Project members | GET / POST | `/projects/{projectId}/members` |
 | Project members | DELETE | `/projects/{projectId}/members/{userId}` |
-| Tasks | GET / POST | `/tasks` |
+| Tasks | GET (paginated) / POST | `/tasks` |
 | Tasks | GET / PUT / DELETE | `/tasks/{id}` |
 | Tasks | PATCH | `/tasks/{id}/status` |
 | Tasks | PATCH | `/tasks/{id}/assignee` |
+| Tasks | GET | `/tasks/export` (CSV, same filters as the list endpoint) |
 | Task comments | GET / POST | `/tasks/{id}/comments` |
 | Task history | GET | `/tasks/{id}/history` |
 | Dashboard | GET | `/dashboard/statistics` |
+| Audit log (admin) | GET (paginated) | `/audit-log` |
 
-Protected routes require an `Authorization: Bearer <token>` header, obtained from `/auth/login`.
+Protected routes require an `Authorization: Bearer <token>` header, obtained from `/auth/login`. Access tokens are short-lived; `/auth/refresh` exchanges a valid refresh token for a new access + refresh token pair (rotating — the old refresh token is invalidated), and `/auth/logout` revokes the current refresh token server-side.
+
+Paginated list endpoints (`/users`, `/projects`, `/tasks`, `/audit-log`) accept standard Spring Data query params: `page` (0-based, default `0`), `size` (default `20`), and `sort` (e.g. `sort=dueDate,asc`; tasks default to `sort=createdAt,desc`). Responses are a Spring `Page` object (`content`, `totalElements`, `totalPages`, etc). Export endpoints ignore pagination and return the full matching result set as a CSV file download.
 
 ## Project structure
 
@@ -145,6 +165,14 @@ team-task-manager/
 │       ├── services/      # Axios API clients
 │       ├── store/         # Pinia stores
 │       └── router/        # Vue Router config
-├── db/init/               # SQL run automatically on first `docker compose up`
-├── docker-compose.yml      # MySQL service
+├── docker-compose.yml     # MySQL service
 ```
+
+Flyway migrations (schema + seed data) live under `back/src/main/resources/db/migration/` and run automatically when the backend starts.
+
+## Known limitations & future improvements
+
+- No frontend automated test suite (backend has JUnit/MockMvc coverage; see "Running tests" above).
+- Non-admin users' paginated project list is sliced in memory after fetching all of a user's memberships, rather than via a paginated DB query — acceptable at this project's scale, but wouldn't scale to a user with very many project memberships.
+- No Kanban board, email notifications, file attachments, or WebSocket notifications — listed as optional/bonus features in the spec and not implemented. (Dark mode, CSV export, rotating refresh tokens, and an admin audit log — also bonus features — are implemented.)
+- The audit log covers admin actions on users and projects (create/update/status/deactivate, member add/remove) but not auth events (login/logout) or task field changes (those are already covered separately by per-task history, see `/tasks/{id}/history`).

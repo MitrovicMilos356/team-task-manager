@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import AppHeader from '../../components/AppHeader.vue'
 import * as usersAdminService from '../../services/usersAdminService'
+import { downloadBlob } from '../../utils/download'
 
 const ROLES = ['admin', 'member']
 
@@ -130,6 +131,22 @@ async function toggleActive(user) {
   }
 }
 
+const exporting = ref(false)
+const exportError = ref('')
+
+async function exportCsv() {
+  exportError.value = ''
+  exporting.value = true
+  try {
+    const { data } = await usersAdminService.exportUsersCsv()
+    downloadBlob(data, 'users.csv')
+  } catch (err) {
+    exportError.value = err.response?.data?.message || 'Could not export users.'
+  } finally {
+    exporting.value = false
+  }
+}
+
 onMounted(loadUsers)
 </script>
 
@@ -140,10 +157,16 @@ onMounted(loadUsers)
       <div class="panel">
         <div class="panel-header">
           <h1>User administration</h1>
-          <button class="btn-primary" type="button" style="width:auto" @click="openCreateModal">
-            Add user
-          </button>
+          <div class="table-actions">
+            <button class="btn-secondary" type="button" :disabled="exporting" @click="exportCsv">
+              {{ exporting ? 'Exporting…' : 'Export CSV' }}
+            </button>
+            <button class="btn-primary" type="button" style="width:auto" @click="openCreateModal">
+              Add user
+            </button>
+          </div>
         </div>
+        <div v-if="exportError" class="alert-error">{{ exportError }}</div>
 
         <div v-if="loading" class="empty-state">Loading users…</div>
         <div v-else-if="loadError" class="alert-error">{{ loadError }}</div>

@@ -7,7 +7,12 @@ import com.ttm.back.dto.UserResponse;
 import com.ttm.back.security.CurrentUser;
 import com.ttm.back.service.AuthService;
 import com.ttm.back.service.UserAdminService;
+import com.ttm.back.util.CsvExporter;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,15 +37,32 @@ public class UserController {
     }
 
     @GetMapping
-    public List<UserResponse> list() {
+    public Page<UserResponse> list(@PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
         CurrentUser.requireAdmin();
-        return userAdminService.listUsers();
+        return userAdminService.listUsers(pageable);
     }
 
     @PostMapping
     public ResponseEntity<UserResponse> create(@Valid @RequestBody CreateUserRequest request) {
         CurrentUser.requireAdmin();
         return ResponseEntity.status(HttpStatus.CREATED).body(userAdminService.createUser(request));
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> export() {
+        CurrentUser.requireAdmin();
+        List<UserResponse> users = userAdminService.exportUsers();
+        List<String> headers = List.of("id", "firstName", "lastName", "email", "role", "active", "createdAt", "updatedAt");
+        return CsvExporter.export("users.csv", headers, users, user -> List.of(
+                String.valueOf(user.getId()),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail(),
+                user.getRole().name(),
+                String.valueOf(user.isActive()),
+                String.valueOf(user.getCreatedAt()),
+                String.valueOf(user.getUpdatedAt())
+        ));
     }
 
     @PutMapping("/{id}")

@@ -2,6 +2,7 @@ package com.ttm.back.controller;
 
 import com.ttm.back.dto.AuthResponse;
 import com.ttm.back.dto.LoginRequest;
+import com.ttm.back.dto.RefreshRequest;
 import com.ttm.back.dto.RegisterRequest;
 import com.ttm.back.dto.UserResponse;
 import com.ttm.back.service.AuthService;
@@ -28,5 +29,16 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        return ResponseEntity.ok(authService.refresh(request.getRefreshToken()));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshRequest request) {
+        authService.logout(request.getRefreshToken());
+        return ResponseEntity.noContent().build();
     }
 }

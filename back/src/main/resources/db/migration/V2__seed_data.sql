@@ -1,4 +1,4 @@
--- 02_seed.sql
+-- V2__seed_data.sql
 -- Minimal sample data for local development/testing
 
 -- Password for both seeded users is: Admin123!

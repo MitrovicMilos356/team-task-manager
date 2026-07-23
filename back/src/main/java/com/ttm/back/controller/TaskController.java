@@ -11,7 +11,12 @@ import com.ttm.back.dto.UpdateTaskStatusRequest;
 import com.ttm.back.model.TaskPriority;
 import com.ttm.back.model.TaskStatus;
 import com.ttm.back.service.TaskService;
+import com.ttm.back.util.CsvExporter;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,14 +36,40 @@ public class TaskController {
     }
 
     @GetMapping
-    public List<TaskResponse> list(@RequestParam(required = false) Long projectId,
+    public Page<TaskResponse> list(@RequestParam(required = false) Long projectId,
                                     @RequestParam(required = false) TaskStatus status,
                                     @RequestParam(required = false) TaskPriority priority,
                                     @RequestParam(required = false) Long assignedUserId,
                                     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueBefore,
                                     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueAfter,
-                                    @RequestParam(required = false) String q) {
-        return taskService.listTasks(projectId, status, priority, assignedUserId, dueBefore, dueAfter, q);
+                                    @RequestParam(required = false) String q,
+                                    @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return taskService.listTasks(projectId, status, priority, assignedUserId, dueBefore, dueAfter, q, pageable);
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> export(@RequestParam(required = false) Long projectId,
+                                          @RequestParam(required = false) TaskStatus status,
+                                          @RequestParam(required = false) TaskPriority priority,
+                                          @RequestParam(required = false) Long assignedUserId,
+                                          @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueBefore,
+                                          @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueAfter,
+                                          @RequestParam(required = false) String q) {
+        List<TaskResponse> tasks = taskService.exportTasks(projectId, status, priority, assignedUserId, dueBefore, dueAfter, q);
+        List<String> headers = List.of("id", "title", "description", "projectId", "status", "priority",
+                "assignedUser", "dueDate", "createdAt", "updatedAt");
+        return CsvExporter.export("tasks.csv", headers, tasks, task -> List.of(
+                String.valueOf(task.getId()),
+                task.getTitle(),
+                task.getDescription() != null ? task.getDescription() : "",
+                String.valueOf(task.getProjectId()),
+                task.getStatus().name(),
+                task.getPriority().name(),
+                task.getAssignedUser() != null ? task.getAssignedUser().getFirstName() + " " + task.getAssignedUser().getLastName() : "",
+                task.getDueDate() != null ? task.getDueDate().toString() : "",
+                String.valueOf(task.getCreatedAt()),
+                String.valueOf(task.getUpdatedAt())
+        ));
     }
 
     @GetMapping("/{id}")

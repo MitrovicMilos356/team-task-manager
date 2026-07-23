@@ -14,6 +14,9 @@ import com.ttm.back.repository.ProjectRepository;
 import com.ttm.back.repository.UserRepository;
 import com.ttm.back.security.CurrentUser;
 import com.ttm.back.security.ProjectAccessGuard;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -30,22 +33,40 @@ public class ProjectService {
     private final ProjectMemberRepository projectMemberRepository;
     private final UserRepository userRepository;
     private final ProjectAccessGuard accessGuard;
+    private final AuditLogService auditLogService;
 
     public ProjectService(ProjectRepository projectRepository,
                            ProjectMemberRepository projectMemberRepository,
                            UserRepository userRepository,
-                           ProjectAccessGuard accessGuard) {
+                           ProjectAccessGuard accessGuard,
+                           AuditLogService auditLogService) {
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.userRepository = userRepository;
         this.accessGuard = accessGuard;
+        this.auditLogService = auditLogService;
     }
 
-    public List<ProjectResponse> listProjects() {
-        List<Project> projects = CurrentUser.getRole() == Role.admin
-                ? projectRepository.findAll()
-                : projectRepository.findAllById(accessGuard.visibleProjectIds());
-        return projects.stream()
+    public Page<ProjectResponse> listProjects(Pageable pageable) {
+        if (CurrentUser.getRole() == Role.admin) {
+            return projectRepository.findAll(pageable).map(this::toResponse);
+        }
+
+        List<ProjectResponse> visible = projectRepository.findAllById(accessGuard.visibleProjectIds()).stream()
+                .map(this::toResponse)
+                .toList();
+        return sliceInMemory(visible, pageable);
+    }
+
+    private <T> Page<T> sliceInMemory(List<T> items, Pageable pageable) {
+        int start = Math.min((int) pageable.getOffset(), items.size());
+        int end = Math.min(start + pageable.getPageSize(), items.size());
+        return new PageImpl<>(items.subList(start, end), pageable, items.size());
+    }
+
+    public List<ProjectResponse> exportProjects() {
+        CurrentUser.requireAdmin();
+        return projectRepository.findAll().stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -60,20 +81,26 @@ public class ProjectService {
         project.setName(request.getName());
         project.setDescription(request.getDescription());
         project.setActive(true);
-        return toResponse(projectRepository.save(project));
+        Project saved = projectRepository.save(project);
+        auditLogService.record("PROJECT_CREATED", "PROJECT", saved.getId(), "name=" + saved.getName());
+        return toResponse(saved);
     }
 
     public ProjectResponse updateProject(Long id, ProjectRequest request) {
         Project project = findProjectOrThrow(id);
         project.setName(request.getName());
         project.setDescription(request.getDescription());
-        return toResponse(projectRepository.save(project));
+        Project saved = projectRepository.save(project);
+        auditLogService.record("PROJECT_UPDATED", "PROJECT", saved.getId(), "name=" + saved.getName());
+        return toResponse(saved);
     }
 
     public ProjectResponse deactivateProject(Long id) {
         Project project = findProjectOrThrow(id);
         project.setActive(false);
-        return toResponse(projectRepository.save(project));
+        Project saved = projectRepository.save(project);
+        auditLogService.record("PROJECT_DEACTIVATED", "PROJECT", saved.getId(), "name=" + saved.getName());
+        return toResponse(saved);
     }
 
     public List<ProjectMemberResponse> listMembers(Long projectId) {
@@ -107,6 +134,7 @@ public class ProjectService {
         member.setUserId(userId);
         ProjectMember saved = projectMemberRepository.save(member);
 
+        auditLogService.record("PROJECT_MEMBER_ADDED", "PROJECT", projectId, "userId=" + userId);
         return ProjectMemberResponse.of(UserResponse.fromEntity(user), saved.getCreatedAt());
     }
 
@@ -115,6 +143,7 @@ public class ProjectService {
         ProjectMember member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User is not a member of this project"));
         projectMemberRepository.delete(member);
+        auditLogService.record("PROJECT_MEMBER_REMOVED", "PROJECT", projectId, "userId=" + userId);
     }
 
     private Project findProjectOrThrow(Long id) {

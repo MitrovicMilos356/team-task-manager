@@ -1,11 +1,16 @@
 import api from './api'
 
-export function getTasksByProject(projectId) {
-  return api.get('/tasks', { params: { projectId } })
+export async function getTasksByProject(projectId) {
+  const { data } = await api.get('/tasks', { params: { projectId, size: 1000 } })
+  return { data: data.content }
 }
 
-export function getTasks(filters = {}) {
-  return api.get('/tasks', { params: filters })
+export function getTasks(filters = {}, page = 0, size = 20) {
+  return api.get('/tasks', { params: { ...filters, page, size } })
+}
+
+export function exportTasksCsv(filters = {}) {
+  return api.get('/tasks/export', { params: filters, responseType: 'blob' })
 }
 
 export function getTask(taskId) {
