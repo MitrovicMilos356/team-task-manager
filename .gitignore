@@ -23,7 +23,7 @@ Thumbs.db
 
 # Ignore the project_team_task_manager.html file
 project_team_task_manager.html
-
+team_task_manager_deployment_zadatak.html
 # Ignore Claude's heavy internal cache and chat log folders
 .claude/
 !.claude/settings.json
