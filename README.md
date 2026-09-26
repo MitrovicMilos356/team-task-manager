@@ -98,6 +98,7 @@ Each app has its own `.env`, copied from an `.env.example`. Defaults match `dock
 | `JWT_SECRET` | *(dev placeholder)* | Secret used to sign JWTs — change for anything beyond local dev |
 | `JWT_EXPIRATION_MINUTES` | `120` | Access token lifetime |
 | `REFRESH_TOKEN_EXPIRATION_DAYS` | `7` | Refresh token lifetime |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:*,http://127.0.0.1:*,http://192.168.*.*:*` | Comma-separated list of allowed CORS origin patterns. In production, set this to the deployed frontend's origin(s), e.g. `https://your-app.pages.dev` |
 
 **`front/.env`**
 
@@ -151,6 +152,7 @@ Paginated list endpoints (`/users`, `/projects`, `/tasks`, `/audit-log`) accept 
 ```
 team-task-manager/
 ├── back/                  # Spring Boot API
+│   ├── Dockerfile
 │   └── src/main/java/com/ttm/back/
 │       ├── controller/    # REST controllers
 │       ├── dto/           # Request/response payloads
@@ -169,6 +171,70 @@ team-task-manager/
 ```
 
 Flyway migrations (schema + seed data) live under `back/src/main/resources/db/migration/` and run automatically when the backend starts.
+
+## Deployment
+
+The backend ships with a multi-stage `back/Dockerfile` (Maven build → `eclipse-temurin:17-jre-jammy` runtime) so it can run as a container independent of the host's Java/Maven install. The frontend is a static Vite build, deployable to any static host (e.g. Cloudflare Pages). MySQL is expected to run outside the backend container — either via `docker-compose.yml` (local dev) or installed directly on the host (production).
+
+**Building and running the backend image**
+
+```bash
+cd back
+docker build -t team-task-backend:latest .
+
+docker run -d \
+  --name team-task-backend \
+  --restart unless-stopped \
+  --network host \
+  --env-file .env \
+  team-task-backend:latest
+```
+
+`--network host` lets the container reach a MySQL instance bound to `127.0.0.1` on the same machine without exposing any extra ports. The backend listens on `SERVER_PORT` (default `8080`) — put a reverse proxy (e.g. Nginx) in front of it for TLS; don't expose the backend port directly to the internet. Flyway migrations run automatically on container startup, same as local dev.
+
+**Health check**
+
+`GET /api/health` returns `{"status": "UP"}` with no authentication required — use it to verify the container/proxy is serving traffic (`curl http://127.0.0.1:8080/api/health`).
+
+**Checking logs**
+
+```bash
+docker logs --tail 200 team-task-backend
+```
+
+**Redeploying after a `git pull`**
+
+```bash
+cd /path/to/team-task-manager
+git pull
+cd back
+docker build -t team-task-backend:latest .
+docker rm -f team-task-backend
+docker run -d \
+  --name team-task-backend \
+  --restart unless-stopped \
+  --network host \
+  --env-file .env \
+  team-task-backend:latest
+```
+
+**CORS in production**
+
+Set `CORS_ALLOWED_ORIGINS` in the server's `back/.env` to the deployed frontend's exact origin (e.g. `https://your-app.pages.dev`) — the default only allows local/private-network origins for dev.
+
+**Frontend build**
+
+```bash
+cd front
+npm install
+npm run build
+```
+
+Output goes to `front/dist/`. Set `VITE_API_BASE_URL` (build-time env var) to the production API's public HTTPS URL before building — e.g. `https://api.your-domain.tld/api`. `front/public/_redirects` (copied into `dist/` on build) provides the SPA fallback (`/* /index.html 200`) needed for Vue Router's history mode on static hosts like Cloudflare Pages.
+
+**Secrets**
+
+None of `back/.env`, `front/.env`, `JWT_SECRET`, or DB credentials are committed — only `.env.example` templates are. Production secrets live solely in the server's environment/`.env` file and the static host's build-time environment variable settings.
 
 ## Known limitations & future improvements
 

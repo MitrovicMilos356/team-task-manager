@@ -19,6 +19,7 @@ public class JwtAuthFilter extends HttpFilter {
 
     private static final List<String> PUBLIC_PREFIXES = List.of(
             "/api/auth/",
+            "/api/health",
             "/swagger-ui",
             "/v3/api-docs"
     );
